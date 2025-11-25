@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Escarda's Trading - Job Order Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- ADD MAMMOTH.JS FOR DOCX PREVIEW -->
+  <script src="https://unpkg.com/mammoth@1.4.8/mammoth.browser.min.js"></script>
+  
+  <style>
+    /* Enhanced blinking cursor animation for search */
+    .search-container { position: relative; display: flex; align-items: center; }
+    .search-input { padding-left: 40px !important; height: 45px; }
+    .search-input:focus { outline: none; border-color: #d81d1d; box-shadow: 0 0 0 2px rgba(216, 29, 29, 0.2); }
+
+    /* Blinking cursor element on left side */
+    .search-cursor-left { position: absolute; left: 4px; top: 35%; transform: translateY(-50%); animation: blink 1s infinite; font-size: 1.8rem; display: flex; align-items: center; justify-content: center; }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+    .input { border: 1px solid #d1d5db; padding: 0.5rem; border-radius: 0.375rem; width: 100%; }
+    .btn { background-color: #d81d1de5; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer; border: none; }
+    .btn:hover { background-color: #af1e1e; }
+    .btn-draft { background-color: #f59e0b; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer; border: none; }
+    .btn-draft:hover { background-color: #d97706; }
+    .card { background: white; border-radius: 0.75rem; box-shadow: 0 4px 6px rgba(0,0,0,0.08); padding: 1.5rem; }
+    .section-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; color: #af1e1e; text-align: center; }
+    table { border-collapse: collapse; width: 100%; }
+    table th, table td { border: 1px solid #ddd; text-align: center; padding: 0.5rem; }
+    table th { background-color: #f1f1f1; font-weight: bold; }
+    .hidden { display: none; }
+    .clickable-row { cursor: pointer; transition: background-color .15s; }
+    .clickable-row:hover { background-color: #f0f9ff; }
+
+    /* File attachment styles */
+    .file-drop-area { border: 2px dashed #d1d5db; border-radius: 0.375rem; padding: 1.5rem; text-align: center; transition: all 0.3s; background-color: #f9fafb; cursor: pointer; }
+    .file-drop-area:hover, .file-drop-area.dragover { border-color: #d81d1d; background-color: #fef2f2; }
+    .file-input { display: none; }
+    .file-message { font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem; }
+    .file-preview { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .file-item { background: #f3f4f6; border-radius: 0.375rem; padding: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
+    .file-remove { color: #ef4444; cursor: pointer; font-weight: bold; }
+    .attachment-preview { max-width: 200px; max-height: 200px; border: 1px solid #ddd; border-radius: 0.375rem; margin: 0.5rem 0; }
+    .attachment-link { cursor: pointer; color: #d81d1d; text-decoration: underline; }
+
+    /* God message animation */
+    .god-wrap { width: 100%; margin: .5rem 0 1rem; display: flex; justify-content: center; }
+    .god-message { font-weight: normal; font-size: 1.2rem !important; color: #facc15; text-shadow: 0 0 2px rgba(250,205,21,0.25); animation: slideX 6s ease-in-out infinite, glow 2.2s ease-in-out infinite; }
+
+    @keyframes slideX { 0% { transform: translateX(0); } 25% { transform: translateX(-40px); } 50% { transform: translateX(0); } 75% { transform: translateX(40px); } 100% { transform: translateX(0); } }
+    @keyframes glow { 0% { text-shadow: 0 0 3px rgba(250,205,21,0.25); } 50% { text-shadow: 0 0 12px rgba(250,205,21,0.85); } 100% { text-shadow: 0 0 3px rgba(250,205,21,0.25); } }
+
+    /* Sparkle animation */
+    .sparkle-card { position: relative; overflow: hidden; }
+    .sparkle-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; background-image: radial-gradient(circle, rgba(255,255,255,0.6) 2px, transparent 2px); background-size: 20px 20px; animation: sparkle 1.5s linear infinite; }
+    @keyframes sparkle { from { background-position: 0 0; } to { background-position: 20px 20px; } }
+
+    /* Salang grid styles */
+    .salang-grid { 
+      display: grid; 
+      grid-template-columns: 1fr 1fr 1fr 1fr; 
+      gap: 0.5rem; 
+      margin-top: 1rem;
+    }
+    .salang-header { 
+      font-weight: bold; 
+      background-color: #f1f1f1; 
+      padding: 0.5rem; 
+      text-align: center;
+    }
+
+    @media (max-width:640px) { 
+      .god-message { font-size: 1.125rem; } 
+      .salang-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Print styles */
+    @media print {
+    body * {
+        visibility: hidden;
+    }
+    #printSection, #printSection * {
+        visibility: visible;
+    }
+    #printSection {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: white;
+        display: block !important;
+    }
+    .no-print {
+        display: none !important;
+    }
+}
+
+/* Hide print section on screen */
+#printSection {
+    display: none;
+}
+
+/* Glowing animation for ongoing section */
+.ongoing-section {
+  position: relative;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin: 1rem 0;
+  transition: all 0.3s ease;
+}
+
+.ongoing-section.has-drafts {
+  background-color: white;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+  animation: sectionGlow 2s ease-in-out infinite;
+}
+
+.ongoing-section.no-drafts {
+  background-color: #f9fafb;
+  border: 1px dashed #d1d5db;
+}
+
+@keyframes sectionGlow {
+  0%, 100% {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.08), 0 0 5px rgba(216, 29, 29, 0.3);
+  }
+  50% {
+    box-shadow: 0 4px 6px rgba(0,0,0,0.08), 0 0 20px rgba(216, 29, 29, 0.7);
+  }
+}
+
+.ongoing-section::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  z-index: -1;
+  border-radius: 0.875rem;
+  background: linear-gradient(
+    45deg,
+    #FF0000, #FF7300, #FFFB00, #48FF00,
+    #00FFD5, #002BFF, #FF00C8, #FF0000
+  );
+  background-size: 400%;
+  animation: glowingBorder 20s linear infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.ongoing-section.has-drafts::before {
+  opacity: 1;
+}
+
+@keyframes glowingBorder {
+  0% { background-position: 0 0; }
+  50% { background-position: 400% 0; }
+  100% { background-position: 0 0; }
+}
+
+.ongoing-section.has-drafts::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  border-radius: 0.75rem;
+  background-color: white;
+}
+  </style>
+
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+  <!-- Header with Logo -->
+  <header id="headerWithLogo" class="bg-red-900 text-white flex flex-col items-center p-4">
+    <div class="w-full max-w-4xl">
+      <img src="C:\Users\Admin\Documents\Yracq\comps.jpg" alt="Logo" class="max-w-full h-auto rounded shadow mx-auto">
+    </div>
+  </header>
+
+
+  <!-- Alternate header shown on details page -->
+  <header id="headerWithText" class="bg-red-900 text-white flex items-center justify-center p-4 hidden">
+    <h1 class="text-2xl font-bold">Escarda's Trading</h1>
+  </header>
+
+  <main class="flex-1 p-6 container mx-auto max-w-6xl">
+    <!-- LOGIN -->
+    <section id="loginPage" class="flex justify-center items-center h-full">
+      <div class="card w-full max-w-sm">
+        <h2 class="text-2xl font-bold mb-4 text-center">Login</h2>
+        <input id="username" type="text" placeholder="Username" class="input mb-3" />
+        <input id="password" type="password" placeholder="Password" class="input mb-4" onkeypress="handleLoginKeyPress(event)" />
+        <button onclick="login()" class="btn w-full">Login</button>
+        <p class="text-xs text-gray-500 mt-3 text-center">Default: <b>admin / 1234</b></p>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dashboardPage" class="hidden">
+      <div class="god-wrap">
+        <p class="god-message">✨ Smile, God Loves You ✨</p>
+      </div>
+
+      <h2 class="section-title">Trial Batch Management</h2>
+
+      <!-- Ongoing Job Orders Display -->
+      <div id="ongoingDisplay" class="mt-6 mb-8">
+        <div id="ongoingSection" class="ongoing-section no-drafts">
+          <h3 class="text-lg font-semibold text-red-800 mb-4 flex items-center">
+            <span class="mr-2">📝</span> Ongoing Trial Batch
+            <span id="ongoingCount" class="ml-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full"></span>
+          </h3>
+          <div id="ongoingList" class="space-y-3">
+            <!-- Ongoing items will be injected here by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard buttons (2-column grid) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+        <button onclick="showPage('addJOPage')" class="dashboard-btn border border-gray-300 rounded-lg p-6 shadow-md hover:shadow-lg flex flex-col items-center gap-2 bg-white">
+          <div class="dashboard-icon text-3xl">➕</div>
+          <span class="text-lg font-semibold">Add Job Order</span>
+        </button>
+
+        <button onclick="showPage('searchPage')" class="dashboard-btn border border-gray-300 rounded-lg p-6 shadow-md hover:shadow-lg flex flex-col items-center gap-2 bg-white">
+          <div class="dashboard-icon text-3xl">🔍</div>
+          <span class="text-lg font-semibold">Search Trial Batch</span>
+        </button>
+      </div>
+
+      <div class="mt-10 flex justify-center">
+        <button onclick="logout()" class="btn bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg shadow-md">
+          Logout
+        </button>
+      </div>
+    </section>
+
+    <!-- ADD JOB ORDER -->
+    <section id="addJOPage" class="hidden">
+      <h2 class="section-title">Add Job Order</h2>
+      <form id="jobOrderForm" class="space-y-4 card" onsubmit="event.preventDefault(); confirmSubmit();">
+        <!-- Job order fields -->
+        <input name="date" type="date" class="input" required />
+        <input name="jobNo" type="text" placeholder="Job Order No" class="input" required />
+        <input name="customer" type="text" placeholder="Customer" class="input" required />
+        <input name="poNo" type="text" placeholder="P.O. No" class="input" />
+        <input name="soNo" type="text" placeholder="S.O. No" class="input" />
+        <input name="description" type="text" placeholder="Description" class="input" />
+        <input name="pressNo" type="text" placeholder="Press No" class="input" />
+        <input name="tempSetting" type="text" placeholder="Temp. Setting" class="input" />
+        <input name="pressMan" type="text" placeholder="Press Man" class="input" />
+        <input name="rubberMaterial" type="text" placeholder="Rubber Material" class="input" />
+        <input name="allottedWeight" type="text" placeholder="Allotted Weight" class="input" />
+        <input name="cavity" type="text" placeholder="No. of Cavity" class="input" />
+        <input name="insertDetails" type="text" placeholder="Insert Details" class="input" />
+        <input name="typeOfSalang" type="text" placeholder="Type of Salang" class="input" />
+
+        <!-- Salang -->
+        <h3 class="font-bold mt-4 text-red-800">Salang Details</h3>
+        <div class="salang-grid">
+          <span class="salang-header">Field</span>
+          <span class="salang-header">1st Salang</span>
+          <span class="salang-header">2nd Salang</span>
+          <span class="salang-header">3rd Salang</span>
+
+          <span>Raw Mat. Size</span>
+          <input name="rawSize1" class="input" />
+          <input name="rawSize2" class="input" />
+          <input name="rawSize3" class="input" />
+
+          <span>Raw Mat. Weight</span>
+          <input name="rawWeight1" class="input" />
+          <input name="rawWeight2" class="input" />
+          <input name="rawWeight3" class="input" />
+
+          <span>Overflow Weight</span>
+          <input name="overflow1" class="input" />
+          <input name="overflow2" class="input" />
+          <input name="overflow3" class="input" />
+
+          <span>Cooking Time</span>
+          <input name="cooking1" class="input" />
+          <input name="cooking2" class="input" />
+          <input name="cooking3" class="input" />
+
+          <span>F. Product Weight</span>
+          <input name="prodWeight1" class="input" />
+          <input name="prodWeight2" class="input" />
+          <input name="prodWeight3" class="input" />
+
+          <span>Total Time Duration</span>
+          <input name="time1" class="input" />
+          <input name="time2" class="input" />
+          <input name="time3" class="input" />
+
+          <span>Results</span>
+          <input name="result1" class="input" />
+          <input name="result2" class="input" />
+          <input name="result3" class="input" />
+        </div>
+
+        <!-- File Attachments -->
+        <div class="mt-4">
+          <h3 class="font-bold mb-2 text-red-800">ATTACH FILES:</h3>
+          <div class="file-drop-area" id="fileDropArea">
+            <span class="file-msg">Drag & drop files here or click to browse</span>
+            <input type="file" id="fileInput" class="file-input" multiple accept=".png,.jpg,.jpeg,.pdf,.doc,.docx">
+          </div>
+          <div class="file-message">Supported formats: PNG, JPG, PDF, DOC (Max 5MB each)</div>
+          <div class="file-preview" id="filePreview"></div>
+        </div>
+
+        <div class="mt-4">
+          <h3 class="font-bold mb-2 text-red-800">REMARKS:</h3>
+          <textarea name="remarks" placeholder="Enter remarks here..." class="input h-24"></textarea>
+        </div>
+
+        <div class="mt-4">
+          <h3 class="font-bold mb-2 text-red-800">Created by:</h3>
+          <input name="createdBy" type="text" placeholder="Enter your name" class="input" />
+        </div>
+
+        <!-- TIMESTAMP FIELD -->
+        <div id="timestampField" class="hidden mt-4">
+          <h3 class="font-bold mb-2 text-red-800">Submitted at:</h3>
+          <input name="submittedAt" type="text" class="input" readonly />
+        </div>
+
+        <div class="flex gap-2 mt-4">
+          <button type="submit" class="btn flex-1">💾 Save Job Order</button>
+          <button type="button" onclick="saveAsDraft()" class="btn-draft flex-1">💾 Save Draft</button>
+        </div>
+      </form>
+
+      <div class="mt-4">
+        <button onclick="showPage('dashboardPage')" class="btn bg-gray-500 hover:bg-gray-600">⬅️ Back</button>
+      </div>
+    </section>
+
+    <!-- SEARCH -->
+    <section id="searchPage" class="hidden">
+      <h2 class="section-title">Search Job Orders</h2>
+      <div class="card">
+        <div class="search-container relative">
+          <div id="searchCursor" class="search-cursor-left">🕵️</div>
+          <input id="searchInput" type="text" placeholder="Search by Job No, Customer, Description..." 
+                 class="input mb-4 search-input" onkeypress="handleSearchKeyPress(event)" autofocus />
+        </div>
+        <div id="searchResults" class="mt-4 overflow-x-auto"></div>
+      </div>
+
+      <div class="mt-4">
+        <button onclick="showPage('dashboardPage')" class="btn bg-gray-500 hover:bg-gray-600">⬅️ Back</button>
+      </div>
+    </section>
+
+    <!-- DETAILS -->
+    <section id="detailsPage" class="hidden">
+      <h2 class="section-title">Trial Batch Details</h2>
+      <div class="flex justify-end mb-4 no-print">
+        <button onclick="printJobOrder()" class="btn bg-blue-600 hover:bg-blue-700">🖨️ Print</button>
+      </div>
+      <div class="card">
+        <div id="detailsContent" class="overflow-x-auto text-sm"></div>
+      </div>
+
+      <div class="mt-4 no-print">
+        <button onclick="showPage('dashboardPage')" class="btn bg-gray-500 hover:bg-gray-600">⬅️ Back</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Hidden print section -->
+  <div id="printSection"></div>
+
+  <footer class="bg-red-900 text-white text-center p-4 text-sm mt-8 no-print">
+    © 2025 Escarda's Trading. All Rights Reserved.
+  </footer>
+
+  <script>
+    /* -----------------------
+       Utility & storage
+       ----------------------- */
+    function generateId() {
+      return 'jo_' + Date.now().toString(36) + '_' + Math.floor(Math.random()*10000).toString(36);
+    }
+    
+    function getJobOrders() {
+      let arr = JSON.parse(localStorage.getItem('jobOrders') || '[]');
+      let changed = false;
+      arr = arr.map(item => {
+        if (!item.id) { item.id = generateId(); changed = true; }
+        return item;
+      });
+      if (changed) localStorage.setItem('jobOrders', JSON.stringify(arr));
+      return arr;
+    }
+    
+    function getDrafts() {
+      let arr = JSON.parse(localStorage.getItem('jobOrderDrafts') || '[]');
+      let changed = false;
+      arr = arr.map(item => {
+        if (!item.id) { item.id = generateId(); changed = true; }
+        return item;
+      });
+      if (changed) localStorage.setItem('jobOrderDrafts', JSON.stringify(arr));
+      return arr;
+    }
+    
+    function saveJobOrders(list) {
+      localStorage.setItem('jobOrders', JSON.stringify(list));
+    }
+    
+    function saveDrafts(list) {
+      localStorage.setItem('jobOrderDrafts', JSON.stringify(list));
+      updateOngoingDisplay();
+    }
+
+    let attachedFiles = [];
+    let currentDraftId = null;
+
+    /* -----------------------
+   Ongoing Job Orders Display
+   ----------------------- */
+function updateOngoingDisplay() {
+  const drafts = getDrafts();
+  const ongoingSection = document.getElementById('ongoingSection');
+  const ongoingList = document.getElementById('ongoingList');
+  const ongoingCount = document.getElementById('ongoingCount');
+  
+  ongoingCount.textContent = drafts.length ? `${drafts.length} ongoing` : '';
+  
+  // Update the section class based on whether there are drafts
+  if (drafts.length > 0) {
+    ongoingSection.classList.remove('no-drafts');
+    ongoingSection.classList.add('has-drafts');
+  } else {
+    ongoingSection.classList.remove('has-drafts');
+    ongoingSection.classList.add('no-drafts');
+  }
+  
+  if (!drafts.length) {
+    ongoingList.innerHTML = `
+      <div class="text-center py-8 text-gray-500">
+        <div class="text-4xl mb-2">📝</div>
+        <p>No ongoing trial batches</p>
+      </div>
+    `;
+    return;
+  }
+  
+  let html = '';
+  drafts.forEach(draft => {
+    html += `
+      <div class="sparkle-card ongoing-item p-4 rounded-lg bg-white border border-gray-200" onclick="continueDraft('${draft.id}')">
+        <div class="sparkle-overlay"></div>
+        <div class="flex justify-between items-center">
+          <div class="flex-1">
+            <h4 class="font-semibold text-red-800">${draft.jobNo || 'No Job Number'}</h4>
+            <p class="text-sm text-gray-600">${draft.customer || 'No Customer'} - ${draft.description || 'No Description'}</p>
+            <p class="text-xs text-gray-500">Created: ${draft.date || 'No date'}</p>
+          </div>
+          <div class="flex space-x-2">
+            <!-- <button onclick="deleteDraft('${draft.id}', event)" class="text-red-600 hover:text-red-800 text-sm">🗑️</button> -->
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+  ongoingList.innerHTML = html;
+}
+          
+
+    /* -----------------------
+       Timestamp functionality
+       ----------------------- */
+    function setTimestamp() {
+      const now = new Date();
+      const timestampField = document.querySelector('input[name="submittedAt"]');
+      const formattedTimestamp = now.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      timestampField.value = formattedTimestamp;
+      document.getElementById('timestampField').classList.remove('hidden');
+    }
+
+    function clearTimestamp() {
+      document.querySelector('input[name="submittedAt"]').value = '';
+      document.getElementById('timestampField').classList.add('hidden');
+    }
+
+    /* -----------------------
+       Search cursor functionality
+       ----------------------- */
+    function toggleSearchCursor(show) {
+      const cursor = document.querySelector('.search-cursor-left');
+      if (cursor) {
+        if (show) {
+          cursor.classList.remove('hidden');
+        } else {
+          cursor.classList.add('hidden');
+        }
+      }
+    }
+
+    /* -----------------------
+       Page switching
+       ----------------------- */
+    function showPage(id) {
+      // Clear current draft ID when navigating away from addJOPage
+      if (id !== 'addJOPage') {
+        currentDraftId = null;
+      }
+      
+      document.querySelectorAll('main section').forEach(s => s.classList.add('hidden'));
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('hidden');
+
+      if (id === 'detailsPage') {
+        document.getElementById('headerWithLogo').classList.add('hidden');
+        document.getElementById('headerWithText').classList.remove('hidden');
+      } else {
+        document.getElementById('headerWithLogo').classList.remove('hidden');
+        document.getElementById('headerWithText').classList.add('hidden');
+      }
+
+      if (id === 'loginPage') {
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+      }
+
+      if (id === 'dashboardPage') {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('searchResults').innerHTML = '';
+        updateOngoingDisplay();
+      }
+
+      if (id === 'searchPage') {
+        setTimeout(() => {
+          const searchInput = document.getElementById('searchInput');
+          if (searchInput) {
+            searchInput.focus();
+            toggleSearchCursor(true);
+          }
+        }, 100);
+      }
+
+      if (id !== 'addJOPage') {
+        resetFileAttachments();
+      }
+    }
+
+    /* -----------------------
+       File handling
+       ----------------------- */
+    function initFileUpload() {
+      const fileDropArea = document.getElementById('fileDropArea');
+      const fileInput = document.getElementById('fileInput');
+      if (!fileDropArea || !fileInput) return;
+      fileDropArea.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', e => handleFiles(e.target.files));
+      ['dragenter','dragover','dragleave','drop'].forEach(evt => fileDropArea.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); }));
+      fileDropArea.addEventListener('dragenter', () => fileDropArea.classList.add('dragover'));
+      fileDropArea.addEventListener('dragleave', () => fileDropArea.classList.remove('dragover'));
+      fileDropArea.addEventListener('drop', e => { fileDropArea.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+    }
+    
+    function handleFiles(files) {
+      for (let file of files) {
+        if (file.size > 5*1024*1024) { alert(file.name+" is too large."); continue; }
+        const reader = new FileReader();
+        reader.onload = e => {
+          const fileData = { name:file.name, type:file.type, size:file.size, data:e.target.result };
+          attachedFiles.push(fileData);
+          createFilePreview(fileData);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+    
+    function createFilePreview(fileData) {
+      const filePreview = document.getElementById('filePreview');
+      if (!filePreview) return;
+      
+      const fileItem = document.createElement('div');
+      fileItem.className = 'file-item flex-col items-start';
+      fileItem.dataset.name = fileData.name;
+      
+      let previewContent = '';
+      const fileName = fileData.name.toLowerCase();
+      
+      if (fileData.type.includes('image')) {
+        previewContent = `<img src="${fileData.data}" alt="${fileData.name}" class="attachment-preview cursor-pointer" onclick="openAttachmentPreview('${fileData.name}')">`;
+      } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+        previewContent = `<span class="attachment-link" onclick="openAttachmentPreview('${fileData.name}')">📄 ${fileData.name} (DOCX)</span>`;
+      } else if (fileName.endsWith('.pdf')) {
+        previewContent = `<span class="attachment-link" onclick="openAttachmentPreview('${fileData.name}')">📕 ${fileData.name} (PDF)</span>`;
+      } else if (fileName.endsWith('.txt')) {
+        previewContent = `<span class="attachment-link" onclick="openAttachmentPreview('${fileData.name}')">📝 ${fileData.name} (Text)</span>`;
+      } else {
+        previewContent = `<span class="attachment-link" onclick="openAttachmentPreview('${fileData.name}')">📎 ${fileData.name}</span>`;
+      }
+      
+      fileItem.innerHTML = `
+        <div class="flex items-center gap-2">
+          ${previewContent}
+          <span class="file-remove" onclick="removeFile('${fileData.name}')">×</span>
+        </div>
+      `;
+      filePreview.appendChild(fileItem);
+    }
+    
+    function removeFile(fileName) {
+      attachedFiles = attachedFiles.filter(f => f.name !== fileName);
+      const item = document.querySelector('.file-item[data-name="'+fileName+'"]');
+      if (item) item.remove();
+    }
+    
+    function resetFileAttachments() {
+      attachedFiles = [];
+      document.getElementById('filePreview').innerHTML = '';
+      document.getElementById('fileInput').value = '';
+    }
+    
+    function openAttachmentPreview(fileName) {
+      const file = attachedFiles.find(f => f.name === fileName);
+      if (!file) return alert("File not found.");
+      openFileInNewWindow(file.data, file.name, file.type);
+    }
+
+    function openSavedAttachment(jobId, fileName) {
+      const jobOrders = getJobOrders();
+      const jo = jobOrders.find(j => j.id === jobId);
+      if (!jo || !jo.attachments) return alert("File not found.");
+      
+      const file = jo.attachments.find(f => f.name === fileName);
+      if (!file) return alert("File not found.");
+      
+      openFileInNewWindow(file.data, file.name, file.type);
+    }
+
+    /* -----------------------
+       ENHANCED FILE PREVIEW FUNCTIONS
+       ----------------------- */
+    function openFileInNewWindow(dataUrl, fileName, fileType) {
+      const newWindow = window.open();
+      
+      // Enhanced file type detection
+      if (fileType.includes('image')) {
+        // Images
+        newWindow.document.write(`
+          <html>
+            <head><title>${fileName}</title></head>
+            <body style="margin:0; display:flex; justify-content:center; align-items:center; height:100vh; background:#f5f5f5;">
+              <img src="${dataUrl}" alt="${fileName}" style="max-width:100%; max-height:100%; object-fit:contain;">
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+        
+      } else if (fileType.includes('pdf')) {
+        // PDFs
+        newWindow.document.write(`
+          <html>
+            <head><title>${fileName}</title></head>
+            <body style="margin:0; height:100vh;">
+              <embed src="${dataUrl}" type="application/pdf" width="100%" height="100%">
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+        
+      } else if (fileName.toLowerCase().endsWith('.docx') || fileName.toLowerCase().endsWith('.doc') || fileType.includes('officedocument.wordprocessingml')) {
+        // DOCX files - use mammoth.js conversion
+        previewDocxFile(dataUrl, fileName);
+        return;
+        
+      } else if (fileType.includes('text/plain')) {
+        // Text files
+        fetch(dataUrl)
+          .then(response => response.text())
+          .then(text => {
+            newWindow.document.write(`
+              <html>
+                <head>
+                  <title>${fileName}</title>
+                  <style>
+                    body { font-family: monospace; white-space: pre-wrap; padding: 20px; background: #f5f5f5; }
+                    .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 5px; }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <h3>${fileName}</h3>
+                    <pre>${text}</pre>
+                  </div>
+                </body>
+              </html>
+            `);
+            newWindow.document.close();
+          });
+        return;
+        
+      } else {
+        // Unsupported files
+        fallbackToDownload(newWindow, dataUrl, fileName);
+        return;
+      }
+    }
+
+    // Helper function for files that can't be previewed
+    function fallbackToDownload(newWindow, dataUrl, fileName) {
+      newWindow.document.write(`
+        <html>
+          <head><title>${fileName}</title></head>
+          <body style="padding:40px; text-align:center; font-family: Arial, sans-serif;">
+            <h3>File Preview Not Available</h3>
+            <p>This file type cannot be previewed in the browser.</p>
+            <a href="${dataUrl}" download="${fileName}" 
+               style="display:inline-block; padding:10px 20px; background:#d81d1d; color:white; text-decoration:none; border-radius:5px; margin-top:20px;">
+              📥 Download ${fileName}
+            </a>
+            <p style="margin-top:20px; color:#666; font-size:14px;">
+              Alternatively, you can right-click the link and select "Save link as..."
+            </p>
+          </body>
+        </html>
+      `);
+      newWindow.document.close();
+    }
+
+    function previewDocxFile(dataUrl, fileName) {
+      const newWindow = window.open();
+      newWindow.document.write(`
+        <html>
+          <head>
+            <title>${fileName} - Preview</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+              .loading { text-align: center; padding: 50px; }
+              .content { max-width: 800px; margin: 0 auto; }
+              .download-btn { 
+                background: #d81d1d; 
+                color: white; 
+                padding: 10px 20px; 
+                text-decoration: none; 
+                border-radius: 5px; 
+                display: inline-block; 
+                margin: 20px 0; 
+              }
+            </style>
+          </head>
+          <body>
+            <div class="loading" id="loading">
+              <h3>Loading document preview...</h3>
+              <p>Please wait while we convert the document for viewing.</p>
+            </div>
+            <div id="content" class="content" style="display:none;"></div>
+            <div id="error" style="display:none; text-align:center; padding:50px;">
+              <h3>Preview Not Available</h3>
+              <p>Unable to generate preview for this document.</p>
+              <a href="${dataUrl}" download="${fileName}" class="download-btn">Download Document</a>
+            </div>
+          </body>
+        </html>
+      `);
+      
+      // Convert data URL to array buffer
+      fetch(dataUrl)
+        .then(response => response.arrayBuffer())
+        .then(arrayBuffer => {
+          return mammoth.convertToHtml({arrayBuffer: arrayBuffer});
+        })
+        .then(result => {
+          const contentDiv = newWindow.document.getElementById('content');
+          const loadingDiv = newWindow.document.getElementById('loading');
+          
+          contentDiv.innerHTML = `
+            <h1>${fileName}</h1>
+            <a href="${dataUrl}" download="${fileName}" class="download-btn">📥 Download Original File</a>
+            <hr>
+            ${result.value}
+          `;
+          
+          loadingDiv.style.display = 'none';
+          contentDiv.style.display = 'block';
+          
+          // Apply any custom styles from the conversion
+          if (result.messages && result.messages.length > 0) {
+            console.log('Conversion messages:', result.messages);
+          }
+        })
+        .catch(error => {
+          console.error('Error converting DOCX:', error);
+          const loadingDiv = newWindow.document.getElementById('loading');
+          const errorDiv = newWindow.document.getElementById('error');
+          
+          loadingDiv.style.display = 'none';
+          errorDiv.style.display = 'block';
+        });
+      
+      newWindow.document.close();
+    }
+
+    /* -----------------------
+       Save Job Order
+       ----------------------- */
+    function confirmSubmit() {
+      if (confirm("Are you sure you want to save this Job Order?")) {
+        saveJobOrder();
+      }
+    }
+    
+    function saveJobOrder() {
+      setTimestamp();
+      
+      const form = document.getElementById('jobOrderForm');
+      const data = new FormData(form);
+      const jobOrder = {};
+      for (let [key,val] of data.entries()) jobOrder[key] = val;
+      
+      // Check if we're editing an existing draft
+      if (currentDraftId) {
+        // Update existing draft - remove from drafts and add to job orders
+        jobOrder.id = currentDraftId;
+        
+        // Remove from drafts
+        const drafts = getDrafts();
+        const updatedDrafts = drafts.filter(d => d.id !== currentDraftId);
+        saveDrafts(updatedDrafts);
+        
+        // Add to job orders
+        jobOrder.attachments = attachedFiles;
+        const jobOrders = getJobOrders();
+        jobOrders.push(jobOrder);
+        saveJobOrders(jobOrders);
+        
+        // Clear the draft ID
+        currentDraftId = null;
+      } else {
+        // Create new job order
+        jobOrder.id = generateId();
+        jobOrder.attachments = attachedFiles;
+        const jobOrders = getJobOrders();
+        jobOrders.push(jobOrder);
+        saveJobOrders(jobOrders);
+      }
+      
+      alert("Job Order saved successfully!");
+      form.reset();
+      resetFileAttachments();
+      clearTimestamp();
+      showPage('dashboardPage');
+    }
+
+    function saveAsDraft() {
+      clearTimestamp(); // Ensure no timestamp for drafts
+      
+      const form = document.getElementById('jobOrderForm');
+      const data = new FormData(form);
+      const draft = {};
+      for (let [key,val] of data.entries()) draft[key] = val;
+      draft.id = generateId();
+      draft.attachments = attachedFiles;
+      draft.isDraft = true;
+      draft.createdAt = new Date().toISOString();
+      
+      const drafts = getDrafts();
+      drafts.push(draft);
+      saveDrafts(drafts);
+      alert("Draft saved successfully!");
+      showPage('dashboardPage');
+    }
+
+    /* -----------------------
+   Continue Draft Function - FIXED
+   ----------------------- */
+function continueDraft(id) {
+  const drafts = getDrafts();
+  const draft = drafts.find(d => d.id === id);
+  if (!draft) return alert("Draft not found.");
+  
+  // Store the draft ID for when we save
+  currentDraftId = id;
+  
+  // Clear the form first to ensure no old data remains
+  const form = document.getElementById('jobOrderForm');
+  form.reset();
+  
+  // Populate the form with draft data
+  Object.keys(draft).forEach(key => {
+    if (form.elements[key] && draft[key] !== undefined && draft[key] !== null) {
+      form.elements[key].value = draft[key];
+    }
+  });
+  
+  // Load attachments
+  attachedFiles = draft.attachments || [];
+  const filePreview = document.getElementById('filePreview');
+  filePreview.innerHTML = '';
+  attachedFiles.forEach(file => {
+    createFilePreview(file);
+  });
+  
+  showPage('addJOPage');
+}
+
+/* -----------------------
+   Delete Draft Function - FIXED
+   ----------------------- */
+function deleteDraft(id, event) {
+  if (event) {
+    event.stopPropagation(); // Prevent triggering the parent click event
+  }
+  
+  if (confirm("Are you sure you want to delete this draft?")) {
+    const drafts = getDrafts();
+    const updatedDrafts = drafts.filter(d => d.id !== id);
+    saveDrafts(updatedDrafts);
+    updateOngoingDisplay();
+  }
+}
+
+    /* -----------------------
+       Search & Table
+       ----------------------- */
+    function searchJobOrders() {
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      const jobOrders = getJobOrders();
+      let filtered = jobOrders;
+      if (q) {
+        filtered = jobOrders.filter(jo =>
+          (jo.jobNo||'').toLowerCase().includes(q) ||
+          (jo.customer||'').toLowerCase().includes(q) ||
+          (jo.description||'').toLowerCase().includes(q)
+        );
+      }
+      renderTable(filtered);
+    }
+    
+    function renderTable(list) {
+      const res = document.getElementById('searchResults');
+      if (!list.length) { res.innerHTML = "<p class='text-gray-500'>No matching records found.</p>"; return; }
+      let html = `<table class="min-w-full border">
+        <thead><tr>
+          <th>Job No</th><th>Customer</th><th>Description</th><th>Date</th>
+        </tr></thead><tbody>`;
+      list.forEach(jo => {
+        html += `<tr class="clickable-row" onclick="viewDetails('${jo.id}')">
+          <td>${jo.jobNo||''}</td>
+          <td>${jo.customer||''}</td>
+          <td>${jo.description||''}</td>
+          <td>${jo.date||''}</td>
+        </tr>`;
+      });
+      html += "</tbody></table>";
+      res.innerHTML = html;
+    }
+
+    /* -----------------------
+       View Details
+       ----------------------- */
+        function viewDetails(id) {
+      const jobOrders = getJobOrders();
+      const jo = jobOrders.find(x => x.id === id);
+      if (!jo) return alert("Record not found.");
+      let html = `<div class="space-y-2">
+        <p><b>Date:</b> ${jo.date||''}</p>
+        <p><b>Job Order No:</b> ${jo.jobNo||''}</p>
+        <p><b>Customer:</b> ${jo.customer||''}</p>
+        <p><b>P.O. No:</b> ${jo.poNo||''}</p>
+        <p><b>S.O. No:</b> ${jo.soNo||''}</p>
+        <p><b>Description:</b> ${jo.description||''}</p>
+        <p><b>Press No:</b> ${jo.pressNo||''}</p>
+        <p><b>Temp. Setting:</b> ${jo.tempSetting||''}</p>
+        <p><b>Press Man:</b> ${jo.pressMan||''}</p>
+        <p><b>Rubber Material:</b> ${jo.rubberMaterial||''}</p>
+        <p><b>Allotted Weight:</b> ${jo.allottedWeight||''}</p>
+        <p><b>No. of Cavity:</b> ${jo.cavity||''}</p>
+        <p><b>Insert Details:</b> ${jo.insertDetails||''}</p>
+        <p><b>Type of Salang:</b> ${jo.typeOfSalang||''}</p>
+        <h3 class="font-bold mt-4 text-red-800">Salang</h3>
+        <table class="min-w-full border text-xs">
+          <thead><tr><th>Field</th><th>1st</th><th>2nd</th><th>3rd</th></tr></thead>
+          <tbody>
+            <tr><td>Raw Size</td><td>${jo.rawSize1||''}</td><td>${jo.rawSize2||''}</td><td>${jo.rawSize3||''}</td></tr>
+            <tr><td>Raw Weight</td><td>${jo.rawWeight1||''}</td><td>${jo.rawWeight2||''}</td><td>${jo.rawWeight3||''}</td></tr>
+            <tr><td>Overflow</td><td>${jo.overflow1||''}</td><td>${jo.overflow2||''}</td><td>${jo.overflow3||''}</td></tr>
+            <tr><td>Cooking</td><td>${jo.cooking1||''}</td><td>${jo.cooking2||''}</td><td>${jo.cooking3||''}</td></tr>
+            <tr><td>Prod Weight</td><td>${jo.prodWeight1||''}</td><td>${jo.prodWeight2||''}</td><td>${jo.prodWeight3||''}</td></tr>
+            <tr><td>Total Time</td><td>${jo.time1||''}</td><td>${jo.time2||''}</td><td>${jo.time3||''}</td></tr>
+            <tr><td>Result</td><td>${jo.result1||''}</td><td>${jo.result2||''}</td><td>${jo.result3||''}</td></tr>
+          </tbody>
+        </table>
+        <p><b>Remarks:</b> ${jo.remarks||''}</p>
+        <p><b>Created by:</b> ${jo.createdBy||''}</p>
+        ${jo.submittedAt ? `<p><b>Submitted at:</b> ${jo.submittedAt}</p>` : ''}
+        <h3 class="font-bold mt-4 text-red-800">Attachments:</h3>`;
+      
+      if (jo.attachments && jo.attachments.length) {
+        jo.attachments.forEach(file => {
+          const fileName = file.name.toLowerCase();
+          if (file.type.includes('image')) {
+            html += `<div class="mb-2"><img src="${file.data}" alt="${file.name}" class="attachment-preview cursor-pointer" onclick="openSavedAttachment('${jo.id}', '${file.name}')"></div>`;
+          } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+            html += `<div class="mb-2"><span class="attachment-link" onclick="openSavedAttachment('${jo.id}', '${file.name}')">📄 ${file.name} (DOCX)</span></div>`;
+          } else if (fileName.endsWith('.pdf')) {
+            html += `<div class="mb-2"><span class="attachment-link" onclick="openSavedAttachment('${jo.id}', '${file.name}')">📕 ${file.name} (PDF)</span></div>`;
+          } else if (fileName.endsWith('.txt')) {
+            html += `<div class="mb-2"><span class="attachment-link" onclick="openSavedAttachment('${jo.id}', '${file.name}')">📝 ${file.name} (Text)</span></div>`;
+          } else {
+            html += `<div class="mb-2"><span class="attachment-link" onclick="openSavedAttachment('${jo.id}', '${file.name}')">📎 ${file.name}</span></div>`;
+          }
+        });
+      } else {
+        html += `<p class="text-gray-500">No attachments</p>`;
+      }
+      
+      html += "</div>";
+      document.getElementById('detailsContent').innerHTML = html;
+      
+      // Store current job order for printing
+      window.currentJobOrder = jo;
+      
+      showPage('detailsPage');
+    }
+        
+    /* -----------------------
+       Print Functionality
+       ----------------------- */
+function printJobOrder() {
+    const jo = window.currentJobOrder;
+    if (!jo) return alert("No job order to print.");
+    
+    let printHTML = `
+        <div style="padding: 20px; font-family: Arial, sans-serif;">
+            <h1 style="text-align: center; color: #af1e1e; margin-bottom: 20px;">Escarda's Trading - Job Order</h1>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                <p><b>Date:</b> ${jo.date||''}</p>
+                <p><b>Job Order No:</b> ${jo.jobNo||''}</p>
+                <p><b>Customer:</b> ${jo.customer||''}</p>
+                <p><b>P.O. No:</b> ${jo.poNo||''}</p>
+                <p><b>S.O. No:</b> ${jo.soNo||''}</p>
+                <p><b>Description:</b> ${jo.description||''}</p>
+                <p><b>Press No:</b> ${jo.pressNo||''}</p>
+                <p><b>Temp. Setting:</b> ${jo.tempSetting||''}</p>
+                <p><b>Press Man:</b> ${jo.pressMan||''}</p>
+                <p><b>Rubber Material:</b> ${jo.rubberMaterial||''}</p>
+                <p><b>Allotted Weight:</b> ${jo.allottedWeight||''}</p>
+                <p><b>No. of Cavity:</b> ${jo.cavity||''}</p>
+                <p><b>Insert Details:</b> ${jo.insertDetails||''}</p>
+                <p><b>Type of Salang:</b> ${jo.typeOfSalang||''}</p>
+            </div>
+            <h3 style="color: #af1e1e; margin-top: 20px;">Salang Details</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <thead>
+                    <tr>
+                        <th style="border: 1px solid #ddd; padding: 8px; background-color: #f1f1f1;">Field</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; background-color: #f1f1f1;">1st</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; background-color: #f1f1f1;">2nd</th>
+                        <th style="border: 1px solid #ddd; padding: 8px; background-color: #f1f1f1;">3rd</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;">Raw Size</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.rawSize1||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.rawSize2||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.rawSize3||''}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;">Raw Weight</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.rawWeight1||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.rawWeight2||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.rawWeight3||''}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;">Overflow</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.overflow1||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.overflow2||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.overflow3||''}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;">Cooking</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.cooking1||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.cooking2||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.cooking3||''}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;">Prod Weight</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.prodWeight1||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.prodWeight2||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.prodWeight3||''}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;">Total Time</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.time1||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.time2||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.time3||''}</td></tr>
+                    <tr><td style="border: 1px solid #ddd; padding: 8px;">Result</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.result1||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.result2||''}</td><td style="border: 1px solid #ddd; padding: 8px;">${jo.result3||''}</td></tr>
+                </tbody>
+            </table>
+            <p><b>Remarks:</b> ${jo.remarks||''}</p>
+            <p><b>Created by:</b> ${jo.createdBy||''}</p>`;
+            
+    
+    // Add attachments to print
+    if (jo.attachments && jo.attachments.length) {
+        printHTML += `<h3 style="color: #af1e1e; margin-top: 20px;">Attachments:</h3>`;
+        jo.attachments.forEach(file => {
+            if (file.type.includes('image')) {
+                printHTML += `<div style="margin: 10px 0; page-break-inside: avoid;">
+                  <p><b>${file.name}:</b></p>
+                  <img src="${file.data}" alt="${file.name}" style="max-width: 100%; max-height: 400px; border: 1px solid #ddd;">
+                </div>`;
+            } else {
+                printHTML += `<p>📎 ${file.name} (File type: ${file.type})</p>`;
+            }
+        });
+    }
+    
+    printHTML += `<p style="margin-top: 20px; font-size: 12px; text-align: center;">Printed on: ${new Date().toLocaleString()}</p>
+            </div>`;
+    
+    // Set the print section content
+    const printSection = document.getElementById('printSection');
+    printSection.innerHTML = printHTML;
+    
+    // Use setTimeout to ensure DOM is updated before printing
+    setTimeout(() => {
+        window.print();
+    }, 100);
+}
+
+    /* -----------------------
+       Auth
+       ----------------------- */
+    function login() {
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value.trim();
+      if (u === "admin" && p === "1234") {
+        showPage('dashboardPage');
+      } else alert("Invalid credentials.");
+    }
+    function logout() { showPage('loginPage'); }
+    function handleLoginKeyPress(e) { if (e.key === "Enter") login(); }
+    function handleSearchKeyPress(e) { if (e.key === "Enter") searchJobOrders(); }
+
+    window.onload = () => {
+      showPage('loginPage');
+      initFileUpload();
+    };
+  </script>
+</body>
+</html>
